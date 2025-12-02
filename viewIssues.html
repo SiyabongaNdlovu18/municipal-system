@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Track Issue</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="center-screen">
+
+<div class="card glass">
+  <h2>Track My Issue</h2>
+  <input class="input" id="name" placeholder="Enter your name">
+  <button class="btn" onclick="getIssues()">View Status</button>
+
+  <table id="table"></table>
+</div>
+
+<script>
+async function getIssues(){
+  const res = await fetch('/issuesByCitizen/'+ name.value);
+  const data = await res.json();
+
+  let html = `<tr><th>Issue</th><th>Status</th><th>Admin Feedback</th></tr>`;
+  data.forEach(i => {
+    html += `<tr>
+      <td>${i.issue_type}</td>
+      <td>${i.status}</td>
+      <td>${i.feedback_admin ?? "Pending"}</td>
+    </tr>`;
+  });
+  table.innerHTML = html;
+}
+</script>
+
+</body>
+</html>

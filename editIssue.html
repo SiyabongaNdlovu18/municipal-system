@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Issue</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="center-screen">
+<div class="card">    
+  <h2>Edit Issue</h2>
+  <form id="editForm">
+    <input type="text" name="citizen_name" placeholder="Citizen Name" required>
+    <input type="text" name="issue_type" placeholder="Issue Type" required>
+    <textarea name="description" placeholder="Description" required></textarea>
+    <input type="text" name="location" placeholder="Location" required>
+    <input type="text" name="assigned_worker" placeholder="Assign Worker">
+    <input type="date" name="due_date" required>
+    <select name="status">
+      <option value="Pending">Pending</option>
+      <option value="Attended">Attended</option>
+      <option value="Completed">Completed</option>
+    </select>
+    <button type="submit" class="btn">Update Issue</button>
+  </form>
+</div>
+
+<script src="script.js"></script>
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const id = urlParams.get('id');
+
+async function loadIssue() {
+  const res = await fetch('/issues');
+  const data = await res.json();
+  const issue = data.find(i => i.id == id);
+  if(issue){
+    const form = document.getElementById('editForm');
+    form.citizen_name.value = issue.citizen_name;
+    form.issue_type.value = issue.issue_type;
+    form.description.value = issue.description;
+    form.location.value = issue.location;
+    form.assigned_worker.value = issue.assigned_worker || "";
+    form.due_date.value = issue.due_date ? issue.due_date.split('T')[0] : "";
+    form.status.value = issue.status;
+  }
+}
+
+document.getElementById('editForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target).entries());
+  const res = await fetch(`/updateIssue/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+  const result = await res.json();
+  alert(result.message || "Issue Updated!");
+  window.location.href = "viewIssues.html";
+});
+
+loadIssue();
+</script>
+</body>
+</html>

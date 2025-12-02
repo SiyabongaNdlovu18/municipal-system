@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Worker Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="center-screen">
+
+<div class="card glass">
+  <h2>Welcome Worker: <span id="workerName"></span></h2>
+
+  <table id="table"></table>
+</div>
+
+<script>
+document.getElementById("workerName").innerText = sessionStorage.getItem("username");
+loadIssues();
+
+async function loadIssues(){
+  const res = await fetch('/issuesByWorker/'+sessionStorage.getItem("username"));
+  const data = await res.json();
+
+  let html = `<tr><th>Issue</th><th>Status</th><th>Actions</th></tr>`;
+  data.forEach(i=>{
+    html += `<tr>
+      <td>${i.issue_type}</td>
+      <td>${i.status}</td>
+      <td>
+        <button onclick="update(${i.id},'In Progress')">Start</button>
+        <button onclick="update(${i.id},'Completed')">Done</button>
+      </td>
+    </tr>`;
+  });
+  table.innerHTML = html;
+}
+
+async function update(id,status){
+  await fetch('/updateIssue/'+id,{
+    method:"PUT",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({status})
+  });
+  alert("Updated Successfully!");
+  loadIssues();
+}
+</script>
+
+</body>
+</html>

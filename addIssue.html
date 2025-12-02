@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Submit Issue</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="center-screen">
+
+<div class="card glass">
+  <h2>Submit Municipal Issue</h2>
+
+  <input class="input" id="name" placeholder="Your Full Name">
+  <input class="input" id="location" placeholder="Location">
+  <button class="btn" onclick="getLocation()">Use Current Location</button>
+
+  <select class="input" id="issue_type">
+    <option>Water Leakage</option>
+    <option>Potholes</option>
+    <option>Electricity Issue</option>
+    <option>Garbage Collection</option>
+    <option>Sewage Problems</option>
+  </select>
+
+  <textarea class="input" id="description" placeholder="Describe Issue"></textarea>
+  <button class="btn" onclick="submitIssue()">Submit Issue</button>
+  <p id="msg"></p>
+</div>
+
+<script>
+async function submitIssue(){
+  const payload = {
+    citizen_name: document.getElementById("name").value,
+    issue_type: document.getElementById("issue_type").value,
+    description: document.getElementById("description").value,
+    location: document.getElementById("location").value
+  };
+
+  const res = await fetch('/addIssue',{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+  document.getElementById("msg").innerText = data.message;
+
+  // Clear form
+  document.getElementById("name").value = "";
+  document.getElementById("description").value = "";
+  document.getElementById("location").value = "";
+}
+
+// GET CURRENT LOCATION
+function getLocation(){
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(position=>{
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      document.getElementById("location").value = `${lat}, ${lng}`;
+      window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
+    });
+  } else {
+    alert("Geolocation not supported!");
+  }
+}
+</script>
+
+</body>
+</html>

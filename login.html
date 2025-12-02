@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Portal</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="center-screen">
+
+<div class="card glass">
+  <h2 id="roleTitle"></h2>
+
+  <input type="text" id="username" placeholder="Username" class="input">
+  <input type="password" id="password" placeholder="Password" class="input">
+
+  <button class="btn" onclick="login()">Login</button>
+  <p id="msg"></p>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const role = params.get("role");
+document.getElementById("roleTitle").innerText = role.toUpperCase() + " LOGIN";
+
+async function login(){
+  const res = await fetch('/login', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value,
+        role: role
+    })
+  });
+
+  const data = await res.json();
+  document.getElementById("msg").innerText = data.message;
+
+  if(data.success){
+    sessionStorage.setItem("username", data.username);
+    sessionStorage.setItem("role", data.role);
+
+    if(data.role === "admin") location.href="adminDashboard.html";
+    if(data.role === "worker") location.href="workerDashboard.html";
+  }
+}
+</script>
+
+</body>
+</html>
