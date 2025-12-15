@@ -1,4 +1,6 @@
 // server.js (replace your existing file)
+require('dotenv').config();
+
 const express = require('express');
 const app = express();
 const db = require('./db');
