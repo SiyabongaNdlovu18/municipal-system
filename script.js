@@ -1,190 +1,207 @@
-// =======================
-// Helper Function: Fetch JSON
-// =======================
+// script.js (client-side) - drop into your public folder and include in pages
 async function fetchJSON(url, options = {}) {
-    const res = await fetch(url, options);
-    if (!res.ok) throw new Error("Network error");
-    return await res.json();
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const t = await res.text().catch(()=>null);
+    throw new Error(t || 'Network error');
+  }
+  return await res.json();
 }
 
-// =======================
-// 1️⃣ Submit New Issue
-// =======================
-async function submitIssue() {
-    const data = {
-        citizen_name: document.getElementById("name").value,
-        location: document.getElementById("location").value,
-        issue_type: document.getElementById("issue_type").value,
-        description: document.getElementById("description").value,
-        status: "Pending"
-    };
+/* ---------- Submit Issue (resident) ---------- */
+async function submitIssueFromForm(formId = "issueForm") {
+  const form = document.getElementById(formId);
+  if (!form) return;
 
-    try {
-        const result = await fetchJSON("/issues", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
-        });
-        document.getElementById("msg").innerText = "Issue submitted successfully!";
-        document.getElementById("issueForm").reset();
-    } catch (err) {
-        alert("Error submitting issue: " + err.message);
-    }
+  const data = Object.fromEntries(new FormData(form).entries());
+
+  // If location contains lat,lng, convert to a Google maps link for consistency
+  if (data.location && /^[0-9\.\-]+\s*,\s*[0-9\.\-]+$/.test(data.location.trim())) {
+    const [lat, lng] = data.location.split(',').map(s => s.trim());
+    data.location = `https://www.google.com/maps?q=${lat},${lng}`;
+  }
+
+  try {
+    const result = await fetchJSON('/addIssue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    document.getElementById("msg") && (document.getElementById("msg").innerText = result.message || "Submitted");
+    form.reset();
+  } catch (err) {
+    alert("Error submitting issue: " + err.message);
+  }
 }
 
-// =======================
-// 2️⃣ Load All Issues
-// =======================
-async function loadIssues(tableId = "issuesTable") {
-    try {
-        const data = await fetchJSON("/issues");
-        const table = document.getElementById(tableId);
-        if (!table) return;
-
-        table.innerHTML = `
-            <tr>
-                <th>ID</th>
-                <th>Citizen</th>
-                <th>Type</th>
-                <th>Description</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>Worker</th>
-                <th>Actions</th>
-            </tr>
-        `;
-
-        data.forEach(issue => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${issue.id}</td>
-                <td>${issue.citizen_name}</td>
-                <td>${issue.issue_type}</td>
-                <td>${issue.description}</td>
-                <td><a href="${issue.location}" target="_blank">View Map</a></td>
-                <td>${issue.status}</td>
-                <td>${issue.assigned_worker || "-"}</td>
-                <td>
-                    <a href="editIssue.html?id=${issue.id}">Edit</a>
-                    <button onclick="deleteIssue(${issue.id})">Delete</button>
-                </td>
-            `;
-            table.appendChild(row);
-        });
-    } catch (err) {
-        alert("Error loading issues: " + err.message);
-    }
-}
-
-// =======================
-// 3️⃣ Delete Issue
-// =======================
-async function deleteIssue(id) {
-    if (!confirm("Are you sure you want to delete this issue?")) return;
-    try {
-        await fetchJSON(`/deleteIssue/${id}`, { method: "DELETE" });
-        alert("Issue deleted successfully");
-        loadIssues(); // refresh table
-    } catch (err) {
-        alert("Error deleting issue: " + err.message);
-    }
-}
-
-// =======================
-// 4️⃣ Edit Issue (Load & Update)
-// =======================
-async function loadIssueForEdit() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get("id");
-    if (!id) return;
-
-    try {
-        const data = await fetchJSON("/issues");
-        const issue = data.find(i => i.id == id);
-        if (!issue) return;
-
-        const form = document.getElementById("editForm");
-        form.citizen_name.value = issue.citizen_name;
-        form.issue_type.value = issue.issue_type;
-        form.description.value = issue.description;
-        form.location.value = issue.location;
-        form.assigned_worker.value = issue.assigned_worker || "";
-        form.due_date.value = issue.due_date ? issue.due_date.split("T")[0] : "";
-        form.status.value = issue.status;
-    } catch (err) {
-        alert("Error loading issue: " + err.message);
-    }
-}
-
-async function updateIssue(e) {
-    e.preventDefault();
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get("id");
-    if (!id) return;
-
-    const data = Object.fromEntries(new FormData(e.target).entries());
-
-    try {
-        await fetchJSON(`/updateIssue/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
-        });
-        alert("Issue updated successfully!");
-        window.location.href = "viewIssues.html";
-    } catch (err) {
-        alert("Error updating issue: " + err.message);
-    }
-}
-
-// =======================
-// 5️⃣ Get Current Location
-// =======================
+/* ---------- Get current coordinates and fill input ---------- */
 function fillCurrentLocation(inputId = "location") {
-    if (!navigator.geolocation) {
-        alert("Geolocation not supported");
-        return;
+  const input = document.getElementById(inputId);
+  if (!input) return alert("Location input not found");
+  if (!navigator.geolocation) return alert("Geolocation not supported");
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      // store raw coords so server can convert or we can turn into map link
+      input.value = `${lat}, ${lng}`;
+      // optionally open map in new tab
+      // window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+    },
+    err => {
+      alert("Could not get location. Allow browser location access.");
     }
-    navigator.geolocation.getCurrentPosition(
-        pos => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            document.getElementById(inputId).value = `https://www.google.com/maps?q=${lat},${lng}`;
-        },
-        () => alert("Could not get location. Allow access.")
-    );
+  );
 }
 
-// =======================
-// 6️⃣ Assign Worker
-// =======================
+/* ---------- Load all issues into a table (admin or generic) ---------- */
+async function loadIssues(tableId = "issuesTable") {
+  try {
+    const data = await fetchJSON('/issues');
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    table.innerHTML = `
+      <tr><th>ID</th><th>Citizen</th><th>Type</th><th>Description</th><th>Location</th><th>Worker</th><th>Status</th><th>Assign</th><th>Action</th></tr>
+    `;
+    const workers = await fetchJSON('/workers');
+    const workerOptions = workers.map(w => `<option value="${w.username}">${w.username}</option>`).join('');
+
+    data.forEach(i => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${i.id}</td>
+        <td>${i.citizen_name}</td>
+        <td>${i.issue_type}</td>
+        <td>${i.description}</td>
+        <td>${i.location ? `<a href="${i.location}" target="_blank">View Map</a>` : '-'}</td>
+        <td>${i.assigned_worker || 'Unassigned'}</td>
+        <td>${i.status}</td>
+        <td>
+          <select onchange="assignWorker(${i.id}, this.value)">
+            <option value="">Select Worker</option>
+            ${workerOptions}
+          </select>
+        </td>
+        <td>
+          <button onclick="deleteIssue(${i.id})">Delete</button>
+          <a href="editIssue.html?id=${i.id}">Edit</a>
+        </td>
+      `;
+      table.appendChild(row);
+    });
+
+  } catch (err) {
+    alert("Error loading issues: " + err.message);
+  }
+}
+
+/* ---------- Assign worker ---------- */
 async function assignWorker(issueId, workerName) {
-    try {
-        await fetchJSON(`/assignWorker/${issueId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ assigned_worker: workerName })
-        });
-        alert("Worker assigned successfully!");
-        loadIssues();
-    } catch (err) {
-        alert("Error assigning worker: " + err.message);
-    }
+  if (!workerName) return;
+  try {
+    await fetchJSON(`/assignWorker/${issueId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assigned_worker: workerName, worker: workerName })
+    });
+    alert("Worker Assigned!");
+    if (typeof loadIssues === 'function') loadIssues();
+  } catch (err) {
+    alert("Error assigning worker: " + err.message);
+  }
 }
 
-// =======================
-// 7️⃣ Mark Issue Status
-// =======================
-async function markIssueStatus(issueId, status) {
-    try {
-        await fetchJSON(`/updateIssue/${issueId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status })
-        });
-        alert("Status updated!");
-        loadIssues();
-    } catch (err) {
-        alert("Error updating status: " + err.message);
+/* ---------- Delete issue ---------- */
+async function deleteIssue(id) {
+  if (!confirm("Are you sure?")) return;
+  try {
+    await fetchJSON(`/deleteIssue/${id}`, { method: "DELETE" });
+    alert("Deleted!");
+    if (typeof loadIssues === 'function') loadIssues();
+  } catch (err) {
+    alert("Error deleting: " + err.message);
+  }
+}
+
+/* ---------- Load single issue for edit page ---------- */
+async function loadIssueForEdit() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  if (!id) return;
+  try {
+    const all = await fetchJSON('/issues');
+    const issue = all.find(i => i.id == id);
+    if (!issue) return;
+    const form = document.getElementById('editForm');
+    if (!form) return;
+    form.citizen_name.value = issue.citizen_name || "";
+    form.issue_type.value = issue.issue_type || "";
+    form.description.value = issue.description || "";
+    form.location.value = issue.location || "";
+    form.assigned_worker.value = issue.assigned_worker || "";
+    form.due_date.value = issue.due_date ? issue.due_date.split('T')[0] : "";
+    form.status.value = issue.status || "Pending";
+  } catch (err) {
+    alert("Error loading issue: " + err.message);
+  }
+}
+
+/* ---------- Update issue from edit page ---------- */
+async function updateIssue(e) {
+  e.preventDefault();
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  if (!id) return alert("Issue id missing");
+  const data = Object.fromEntries(new FormData(e.target).entries());
+  try {
+    await fetchJSON(`/updateIssue/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    alert("Issue updated!");
+    window.location.href = "viewIssues.html";
+  } catch (err) {
+    alert("Error updating issue: " + err.message);
+  }
+}
+
+/* ---------- Worker pages: load assigned issues ---------- */
+async function loadWorkerIssues(username, tableId = "table") {
+  try {
+    const data = await fetchJSON('/issuesByWorker/' + encodeURIComponent(username));
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    let html = `<tr><th>Issue</th><th>Status</th><th>Actions</th></tr>`;
+    data.forEach(i => {
+      html += `<tr>
+        <td>${i.issue_type}</td>
+        <td>${i.status}</td>
+        <td>
+          <button onclick="markStatus(${i.id}, 'In Progress')">Start</button>
+          <button onclick="markStatus(${i.id}, 'Completed')">Done</button>
+        </td>
+      </tr>`;
+    });
+    table.innerHTML = html;
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+async function markStatus(id, status) {
+  try {
+    await fetchJSON(`/updateIssue/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status })
+    });
+    alert("Updated Successfully!");
+    if (typeof loadWorkerIssues === 'function') {
+      const uname = sessionStorage.getItem("username");
+      uname && loadWorkerIssues(uname);
     }
+  } catch (err) {
+    alert("Error updating status: " + err.message);
+  }
 }

@@ -6,25 +6,30 @@
 </head>
 <body class="center-screen">
 
+<!-- addIssue.html (body only) -->
 <div class="card glass">
   <h2>Submit Municipal Issue</h2>
 
-  <input class="input" id="name" placeholder="Your Full Name">
-  <input class="input" id="location" placeholder="Location">
-  <button class="btn" onclick="getLocation()">Use Current Location</button>
+  <form id="issueForm" onsubmit="event.preventDefault(); submitIssueFromForm('issueForm')">
+    <input class="input" id="name" name="citizen_name" placeholder="Your Full Name" required>
+    <input class="input" id="location" name="location" placeholder="Location (click Use Current Location)" required>
+    <button type="button" class="btn" onclick="fillCurrentLocation('location')">Use Current Location</button>
 
-  <select class="input" id="issue_type">
-    <option>Water Leakage</option>
-    <option>Potholes</option>
-    <option>Electricity Issue</option>
-    <option>Garbage Collection</option>
-    <option>Sewage Problems</option>
-  </select>
+    <select class="input" id="issue_type" name="issue_type">
+      <option>Water Leakage</option>
+      <option>Potholes</option>
+      <option>Electricity Issue</option>
+      <option>Garbage Collection</option>
+      <option>Sewage Problems</option>
+    </select>
 
-  <textarea class="input" id="description" placeholder="Describe Issue"></textarea>
-  <button class="btn" onclick="submitIssue()">Submit Issue</button>
-  <p id="msg"></p>
+    <textarea class="input" id="description" name="description" placeholder="Describe Issue"></textarea>
+    <button class="btn" type="submit">Submit Issue</button>
+    <p id="msg"></p>
+  </form>
 </div>
+
+<script src="script.js"></script>
 
 <script>
 async function submitIssue(){

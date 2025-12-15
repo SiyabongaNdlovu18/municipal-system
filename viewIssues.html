@@ -8,7 +8,8 @@
 
 <div class="card glass">
   <h2>Track My Issue</h2>
-  <input class="input" id="name" placeholder="Enter your name">
+
+  <input class="input" id="name" placeholder="Enter your full name">
   <button class="btn" onclick="getIssues()">View Status</button>
 
   <table id="table"></table>
@@ -16,18 +17,45 @@
 
 <script>
 async function getIssues(){
-  const res = await fetch('/issuesByCitizen/'+ name.value);
-  const data = await res.json();
+  const name = document.getElementById('name').value.trim();
+  if (!name) return alert('Please enter your full name');
 
-  let html = `<tr><th>Issue</th><th>Status</th><th>Admin Feedback</th></tr>`;
-  data.forEach(i => {
-    html += `<tr>
-      <td>${i.issue_type}</td>
-      <td>${i.status}</td>
-      <td>${i.feedback_admin ?? "Pending"}</td>
-    </tr>`;
-  });
-  table.innerHTML = html;
+  try {
+    const res = await fetch('/issuesByCitizen/' + encodeURIComponent(name));
+    const data = await res.json();
+
+    const table = document.getElementById('table');
+
+    if (data.length === 0) {
+      table.innerHTML = `<tr><td>No issues found for this name.</td></tr>`;
+      return;
+    }
+
+    let html = `
+      <tr>
+        <th>Issue Type</th>
+        <th>Status</th>
+        <th>Assigned Worker</th>
+        <th>Admin Feedback</th>
+      </tr>
+    `;
+
+    data.forEach(i => {
+      html += `
+        <tr>
+          <td>${i.issue_type}</td>
+          <td>${i.status}</td>
+          <td>${i.assigned_worker ?? 'Not assigned'}</td>
+          <td>${i.feedback_admin ?? 'Pending'}</td>
+        </tr>
+      `;
+    });
+
+    table.innerHTML = html;
+
+  } catch (err) {
+    alert("Error fetching issues");
+  }
 }
 </script>
 

@@ -36,7 +36,8 @@ async function loadIssues(){
       <td>
         <select onchange="assignWorker(${i.id}, this.value)">
           <option>Select Worker</option>
-          ${workers.map(w=>`<option>${w.username}</option>`)}
+          ${workers.map(w=>`<option value="${w.username}">${w.username}</option>`).join('')}
+
         </select>
       </td>
       <td>
