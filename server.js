@@ -14,6 +14,25 @@ app.use((req, res, next) => {
   next();
 });
 
+const db = require("./db");
+
+app.post("/issues", (req, res) => {
+  const { fullname, location, issueType, description } = req.body;
+
+  const sql = `
+    INSERT INTO issues (fullname, location, issue_type, description, status)
+    VALUES (?, ?, ?, ?, 'Pending')
+  `;
+
+  db.query(sql, [fullname, location, issueType, description], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json({ message: "Issue submitted successfully" });
+  });
+});
+
 // LOGIN
 app.post('/login', (req, res) => {
   const { username, password, role } = req.body;
