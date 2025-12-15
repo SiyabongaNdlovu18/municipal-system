@@ -14,7 +14,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const db = require("./db");
+
 
 app.post("/issues", (req, res) => {
   const { fullname, location, issueType, description } = req.body;
